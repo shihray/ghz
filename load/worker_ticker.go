@@ -106,8 +106,11 @@ func (c *StepWorkerTicker) Run() {
 				done <- true
 				return
 			} else {
-				c.C <- TickValue{Delta: c.Step}
-				wc = wc + c.Step
+				if !c.isChanClose() {
+					c.C <- TickValue{Delta: c.Step}
+					wc = wc + c.Step
+				}
+				
 			}
 		}
 	}()
@@ -118,6 +121,15 @@ func (c *StepWorkerTicker) Run() {
 // Finish closes the channel.
 func (c *StepWorkerTicker) Finish() {
 	close(c.C)
+}
+
+func (c *StepWorkerTicker) isChanClose() bool {
+	select {
+	case _, received := <- c.C:
+		return !received
+	default:
+	}
+	return false
 }
 
 // LineWorkerTicker is the worker ticker that implements line adjustments to concurrency.

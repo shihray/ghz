@@ -48,8 +48,9 @@ func (c *statsHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 			if ok {
 				st = s.Code().String()
 			}
-
-			c.results <- &callResult{rs.Error, st, duration, rs.EndTime}
+			if !c.isChanClose() {
+				c.results <- &callResult{rs.Error, st, duration, rs.EndTime}
+			}
 
 			if c.hasLog {
 				c.log.Debugw("Received RPC Stats",
@@ -70,4 +71,13 @@ func (c *statsHandler) Ignore(val bool) {
 // TagRPC implements per-RPC context management.
 func (c *statsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
 	return ctx
+}
+
+func (c *statsHandler) isChanClose() bool {
+	select {
+	case _, received := <- c.results:
+		return !received
+	default:
+	}
+	return false
 }
